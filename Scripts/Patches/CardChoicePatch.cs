@@ -148,7 +148,7 @@ namespace SimultaneousCardPicksGM.Patches {
         public static bool IsPlayerInSimCardPicksMode(int playerID) {
             Player player = PlayerManager.instance.players.Find(p => p.playerID == playerID);
 
-            bool checkResult = GameModeManager.CurrentHandler is not SimultaneousCardPicksGameModeHandler || player == null || player.data.view.IsMine;
+            bool checkResult = !(GameModeManager.CurrentHandler is SimultaneousCardPicksGameModeHandler) || player == null || player.data.view.IsMine;
             return checkResult;
         }
 
