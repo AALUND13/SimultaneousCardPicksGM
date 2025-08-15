@@ -2,17 +2,15 @@
 using Photon.Pun;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using UnboundLib;
-using UnboundLib.GameModes;
 using UnboundLib.Networking;
 using UnityEngine;
 
 namespace SimultaneousCardPicksGM.Patches {
     [HarmonyPatch(typeof(CardChoice))]
-    public class CardChoicePatch {
+    internal class CardChoicePatch {
         [HarmonyPatch("RPCA_DoEndPick")]
         [HarmonyTranspiler]
         public static IEnumerable<CodeInstruction> RPCA_DoEndPickTranspiler(IEnumerable<CodeInstruction> instructions, ILGenerator il) {
@@ -28,15 +26,18 @@ namespace SimultaneousCardPicksGM.Patches {
                     var label = il.DefineLabel();
                     codes[i - 4].labels.Add(label);
 
-                    codes.Insert(i - 4, new CodeInstruction(OpCodes.Ldarg_S, 4)); // Load playerID argument
-                    codes.Insert(i - 3, new CodeInstruction(OpCodes.Call, isSimMethod)); // Call IsSimultaneousCardPicksGameMode
-                    codes.Insert(i - 2, new CodeInstruction(OpCodes.Brtrue, label)); // if true -> skip spawnedCards overwrite
-                    codes.Insert(i - 1, new CodeInstruction(OpCodes.Ldarg_1)); // Load cardIDs argument
-                    codes.Insert(i    , new CodeInstruction(OpCodes.Call, desroyCardsMethod)); // Call DesroyCards
-                    codes.Insert(i + 1, new CodeInstruction(OpCodes.Ret)); // Return
+                    CodeInstruction[] injectedInstructions = new CodeInstruction[] {
+                        new CodeInstruction(OpCodes.Ldarg_S, 4), // Load playerID argument
+                        new CodeInstruction(OpCodes.Call, isSimMethod), // Call IsSimultaneousCardPicksGameMode
+                        new CodeInstruction(OpCodes.Brtrue, label), // if true -> skip spawnedCards overwrite
+                        new CodeInstruction(OpCodes.Ldarg_1), // Load cardIDs argument
+                        new CodeInstruction(OpCodes.Call, desroyCardsMethod), // Call DesroyCards
+                        new CodeInstruction(OpCodes.Ret) // Return
+                    };
+                    codes.InsertRange(i - 4, injectedInstructions);
 
                     UnityEngine.Debug.Log("SimultaneousCardPicksGM: Patched a call to in RPCA_DoEndPick.");
-                    i += 6;
+                    i += injectedInstructions.Length;
                 }
             }
 
@@ -49,7 +50,7 @@ namespace SimultaneousCardPicksGM.Patches {
             UnityEngine.Debug.Log("SimultaneousCardPicksGM: Patching ReplaceCards to HideCardsFromOtherPlayers in Simultaneous Card Picks Game Mode.");
             var codes = new List<CodeInstruction>(instructions);
 
-            MethodInfo isSimMethod = AccessTools.Method(typeof(Utils), nameof(Utils.IsInSimultaneousPickPhase));
+            MethodInfo IsSimultaneousPickPhaseInProgressMethod = AccessTools.Method(typeof(SimultaneousPicksHandler), nameof(SimultaneousPicksHandler.IsSimultaneousPickPhaseInProgress));
             MethodInfo hideCardsMethod = AccessTools.Method(typeof(CardChoicePatch), nameof(HideCardsFromOtherPlayers));
             MethodInfo getItemFieldMethod = AccessTools.Method(typeof(List<GameObject>), "get_Item");
 
@@ -71,17 +72,20 @@ namespace SimultaneousCardPicksGM.Patches {
                         var skipLabel = il.DefineLabel();
                         codes[i + 1].labels.Add(skipLabel);
 
-                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, isSimMethod)); // Call IsSimultaneousCardPicksGameMode
-                        codes.Insert(i + 2, new CodeInstruction(OpCodes.Brfalse, skipLabel)); // if false -> continue
-                        codes.Insert(i + 3, new CodeInstruction(OpCodes.Ldloc_1)); // Load the this (CardChoice instance)
-                        codes.Insert(i + 4, new CodeInstruction(OpCodes.Ldfld, spawnedCardsField)); // Load spawnedCards
-                        codes.Insert(i + 5, new CodeInstruction(OpCodes.Ldarg_0)); // Load this ('<IDoEndPick>d__17' instance)
-                        codes.Insert(i + 6, new CodeInstruction(OpCodes.Ldfld, indexField)); // Load the index
-                        codes.Insert(i + 7, new CodeInstruction(OpCodes.Callvirt, getItemFieldMethod)); // Call get_Item on the list
-                        codes.Insert(i + 8, new CodeInstruction(OpCodes.Call, hideCardsMethod)); // Call HideCardsFromOtherPlayers
+                        CodeInstruction[] injectedInstructions = new CodeInstruction[] {
+                            new CodeInstruction(OpCodes.Call, IsSimultaneousPickPhaseInProgressMethod), // Call IsSimultaneousCardPicksGameMode
+                            new CodeInstruction(OpCodes.Brfalse, skipLabel), // if false -> continue
+                            new CodeInstruction(OpCodes.Ldloc_1), // Load the this (CardChoice instance)
+                            new CodeInstruction(OpCodes.Ldfld, spawnedCardsField), // Load spawnedCards
+                            new CodeInstruction(OpCodes.Ldarg_0), // Load this ('<IDoEndPick>d__17' instance)
+                            new CodeInstruction(OpCodes.Ldfld, indexField), // Load the index
+                            new CodeInstruction(OpCodes.Callvirt, getItemFieldMethod), // Call get_Item on the list
+                            new CodeInstruction(OpCodes.Call, hideCardsMethod) // Call HideCardsFromOtherPlayers
+                        };
+                        codes.InsertRange(i + 1, injectedInstructions);
 
                         UnityEngine.Debug.Log("SimultaneousCardPicksGM: Patched a call to HideCardsFromOtherPlayers in ReplaceCards.");
-                        i += 9;
+                        i += injectedInstructions.Length;
                     }
                     index++;
                 }
@@ -94,15 +98,18 @@ namespace SimultaneousCardPicksGM.Patches {
 
                     codes[i + 1].labels.Add(skipLabel);
 
-                    codes.Insert(i - 5, new CodeInstruction(OpCodes.Call, isSimMethod) { labels = originalLabelsAtContinue }); // Call IsSimultaneousCardPicksGameMode
-                    codes.Insert(i - 4, new CodeInstruction(OpCodes.Brfalse, continueLabel)); // if false -> continue
-                    codes.Insert(i - 3, new CodeInstruction(OpCodes.Ldloc_1)); // Load the this (CardChoice instance)
-                    codes.Insert(i - 2, new CodeInstruction(OpCodes.Call, RPCA_DonePickingMethod)); // Call RPCA_DonePicking locally
-                    codes.Insert(i - 1, new CodeInstruction(OpCodes.Br, skipLabel)); // Branch to skip the RPC call
-                    codes.Insert(i    , new CodeInstruction(OpCodes.Nop) { labels = new List<Label> { continueLabel } }); // Continue label for the original code path
+                    CodeInstruction[] injectedInstructions = new CodeInstruction[] {
+                        new CodeInstruction(OpCodes.Call, IsSimultaneousPickPhaseInProgressMethod) { labels = originalLabelsAtContinue }, // Call IsSimultaneousCardPicksGameMode
+                        new CodeInstruction(OpCodes.Brfalse, continueLabel), // if false -> continue
+                        new CodeInstruction(OpCodes.Ldloc_1), // Load the this (CardChoice instance)
+                        new CodeInstruction(OpCodes.Call, RPCA_DonePickingMethod), // Call IsPickerIdIsMe
+                        new CodeInstruction(OpCodes.Br, skipLabel), // Branch to skip the RPC call
+                        new CodeInstruction(OpCodes.Nop) { labels = new List<Label> { continueLabel } } // Continue label for the original code path
+                    };
+                    codes.InsertRange(i - 5, injectedInstructions);
 
                     UnityEngine.Debug.Log("SimultaneousCardPicksGM: Patched a call to RPCA_DonePicking in ReplaceCards.");
-                    i += 6;
+                    i += injectedInstructions.Length;
                 }
             }
 
@@ -125,13 +132,16 @@ namespace SimultaneousCardPicksGM.Patches {
                     var skipLabel = il.DefineLabel();
                     codes[i + 1].labels.Add(skipLabel);
 
-                    codes.Insert(i - 1, new CodeInstruction(OpCodes.Ldarg_0)); // Load this (CardChoice instance)
-                    codes.Insert(i    , new CodeInstruction(OpCodes.Ldfld, picketIDToSetField)); // Load picketIDToSet
-                    codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, isMyPlayerInGameModeMethod)); // Call IsMyPlayerInGameMode
-                    codes.Insert(i + 2, new CodeInstruction(OpCodes.Brtrue, skipLabel)); // if true -> skip CardChoiceVisuals.Hide()
+                    CodeInstruction[] injectedInstructions = new CodeInstruction[] {
+                        new CodeInstruction(OpCodes.Ldarg_0), // Load this (CardChoice instance)
+                        new CodeInstruction(OpCodes.Ldfld, picketIDToSetField), // Load picketIDToSet
+                        new CodeInstruction(OpCodes.Call, isMyPlayerInGameModeMethod), // Call IsMyPlayerInGameMode
+                        new CodeInstruction(OpCodes.Brtrue, skipLabel) // if true -> skip CardChoiceVisuals.Hide()
+                    };
+                    codes.InsertRange(i - 1, injectedInstructions);
 
                     UnityEngine.Debug.Log("SimultaneousCardPicksGM: Patched a call to CardChoiceVisuals.Hide() in DoPick.");
-                    i += 4;
+                    i += injectedInstructions.Length;
                 }
             }
             return codes;
@@ -147,7 +157,7 @@ namespace SimultaneousCardPicksGM.Patches {
         public static bool IsPlayerInSimCardPicksMode(int playerID) {
             Player player = PlayerManager.instance.players.Find(p => p.playerID == playerID);
 
-            bool checkResult = !Utils.IsInSimultaneousPickPhase() || player == null || player.data.view.IsMine;
+            bool checkResult = !SimultaneousPicksHandler.IsSimultaneousPickPhaseInProgress() || player == null || player.data.view.IsMine;
             return checkResult;
         }
 
@@ -161,7 +171,7 @@ namespace SimultaneousCardPicksGM.Patches {
 
         private static bool IsPlayerIsMyAndInSimultaneousPicksGameMode(int playerID) {
             Player player = PlayerManager.instance.players.Find(p => p.playerID == playerID);
-            bool checkResult = Utils.IsInSimultaneousPickPhase() && player != null && !player.data.view.IsMine;
+            bool checkResult = SimultaneousPicksHandler.IsSimultaneousPickPhaseInProgress() && player != null && !player.data.view.IsMine;
             return checkResult;
         }
 

@@ -43,9 +43,5 @@ namespace SimultaneousCardPicksGM {
 
             return null;
         }
-
-        public static bool IsInSimultaneousPickPhase() {
-            return SimultaneousPicksHandler.Instance.IsInSimultaneousPickPhase;
-        }
     }
 }

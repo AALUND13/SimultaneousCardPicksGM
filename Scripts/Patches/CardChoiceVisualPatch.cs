@@ -8,11 +8,11 @@ using UnboundLib;
 
 namespace SimultaneousCardPicksGM.Patches {
     [HarmonyPatch(typeof(CardChoiceVisuals))]
-    public class CardChoiceVisualPatch {
+    internal class CardChoiceVisualPatch {
         [HarmonyPatch("SetCurrentSelected")]
         [HarmonyPrefix]
         public static bool SetCurrentSelectedPrefix(CardChoiceVisuals __instance, int toSet) {
-            if (Utils.IsInSimultaneousPickPhase()) {
+            if (SimultaneousPicksHandler.IsSimultaneousPickPhaseInProgress()) {
                 __instance.InvokeMethod("RPCA_SetCurrentSelected", toSet);
                 return false;
             }

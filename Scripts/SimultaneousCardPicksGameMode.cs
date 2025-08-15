@@ -92,7 +92,6 @@ namespace SimultaneousCardPicksGM {
             StartCoroutine(DoRoundStart());
         }
 
-
         private IEnumerator StartPickPhase(int[] winningTeamIDs = null) {
             List<Player> pickOrder = PlayerManager.instance.GetPickOrder(winningTeamIDs);
 

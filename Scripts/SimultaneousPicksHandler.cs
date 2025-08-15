@@ -13,19 +13,17 @@ namespace SimultaneousCardPicksGM {
         public IReadOnlyDictionary<Player, int> PlayerSimultaneousPicksQueue => playeSimultaneousPicksQueue;
         public bool IsInSimultaneousPickPhase => isInSimultaneousPickPhase;
 
+        private static bool IsAlreadyOutOfPickPhase = false;
+        
         private Dictionary<Player, int> playeSimultaneousPicksQueue = new Dictionary<Player, int>();
         private bool isInSimultaneousPickPhase = false;
-
-        private static bool IsAlreadyOutOfPickPhase = false;
-
         private int WaitForSyncUpCounter = 0;
 
-        private void Awake() {
-            if(Instance != null) {
-                Destroy(this.gameObject);
-            } else {
-                Instance = this;
-            }
+        /// <summary>
+        /// This is mainly used in transpilers to check if the simultaneous pick phase is active.
+        /// </summary>
+        public static bool IsSimultaneousPickPhaseInProgress() {
+            return SimultaneousPicksHandler.Instance.IsInSimultaneousPickPhase;
         }
 
         /// <summary>
@@ -40,10 +38,10 @@ namespace SimultaneousCardPicksGM {
             }
 
             WaitForSyncUpCounter = 0;
+            IsAlreadyOutOfPickPhase = false;
             isInSimultaneousPickPhase = true;
             yield return GameModeManager.TriggerHook(GameModeHooks.HookPickStart);
             yield return WaitForAllPlayersSync();
-            IsAlreadyOutOfPickPhase = false;
 
             foreach(var player in playerPickCounts) {
                 if(player.Value <= 0) continue;
@@ -70,7 +68,6 @@ namespace SimultaneousCardPicksGM {
             }
 
             yield return new WaitForSecondsRealtime(0.1f);
-
             yield return WaitForSyncUp;
             CardChoiceVisuals.instance.Hide();
 
@@ -82,8 +79,16 @@ namespace SimultaneousCardPicksGM {
             yield break;
         }
 
-        public static void AddPlayerToSimultaneousPickQueue(Player player, int pickCount) {
+        public void AddPlayerToSimultaneousPickQueue(Player player, int pickCount) {
             NetworkingManager.RPC(typeof(SimultaneousPicksHandler), nameof(RPCS_AddToSimultaneousPickQueue), player.playerID, pickCount);
+        }
+
+        private void Awake() {
+            if(Instance != null) {
+                Destroy(this.gameObject);
+            } else {
+                Instance = this;
+            }
         }
 
         private static IEnumerator WaitForAllPlayersSync() {
@@ -92,12 +97,6 @@ namespace SimultaneousCardPicksGM {
             while(Instance.WaitForSyncUpCounter < PlayerManager.instance.players.Count) {
                 yield return null;
             }
-
-        }
-
-        [UnboundRPC]
-        public static void RPCS_WaitForAllPlayersSync() {
-            Instance.WaitForSyncUpCounter++;
         }
 
         private IEnumerator DoPick(int playerID, PickerType pickerType) {
@@ -122,6 +121,10 @@ namespace SimultaneousCardPicksGM {
             }
         }
 
+        [UnboundRPC]
+        private static void RPCS_WaitForAllPlayersSync() {
+            Instance.WaitForSyncUpCounter++;
+        }
 
         [UnboundRPC]
         private static void RPCS_ReduceSimultaneousPickCount(int playerID) {
