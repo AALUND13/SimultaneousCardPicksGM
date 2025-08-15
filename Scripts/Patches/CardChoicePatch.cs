@@ -11,6 +11,20 @@ using UnityEngine;
 namespace SimultaneousCardPicksGM.Patches {
     [HarmonyPatch(typeof(CardChoice))]
     internal class CardChoicePatch {
+        [HarmonyPatch(nameof(CardChoice.StartPick))]
+        [HarmonyPostfix]
+        public static void StartPickPostfix(CardChoice __instance, int pickerIDToSet) {
+            UnityEngine.Debug.Log("SimultaneousCardPicksGM: Patching StartPick to set pickrID in Simultaneous Card Picks Game Mode.");
+            if(SimultaneousPicksHandler.IsSimultaneousPickPhaseInProgress()) {
+                Player player = PlayerManager.instance.players.Find(p => p.playerID == pickerIDToSet);
+                if(player != null && !player.data.view.IsMine) {
+                    __instance.IsPicking = false;
+                } else {
+                    UnityEngine.Debug.LogWarning("SimultaneousCardPicksGM: No player found or player is not mine, pickrID will not be set.");
+                }
+            }
+        }
+
         [HarmonyPatch("RPCA_DoEndPick")]
         [HarmonyTranspiler]
         public static IEnumerable<CodeInstruction> RPCA_DoEndPickTranspiler(IEnumerable<CodeInstruction> instructions, ILGenerator il) {

@@ -3,6 +3,7 @@ using HarmonyLib;
 using UnityEngine;
 using UnboundLib;
 using UnboundLib.GameModes;
+using SimultaneousCardPicksGM.GameModes;
 
 namespace SimultaneousCardPicksGM {
     [BepInDependency("pykess.rounds.plugins.moddingutils", BepInDependency.DependencyFlags.HardDependency)]

@@ -12,7 +12,7 @@ using UnityEngine;
 using RWF;
 using UnboundLib.Networking;
 
-namespace SimultaneousCardPicksGM {
+namespace SimultaneousCardPicksGM.GameModes {
     public class SimultaneousCardPicksGameMode : RWFGameMode {
         public override IEnumerator DoStartGame() {
             CardBarHandler.instance.Rebuild();

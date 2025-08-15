@@ -37,6 +37,10 @@ namespace SimultaneousCardPicksGM {
                 playeSimultaneousPicksQueue[player] += playerPickCounts[player];
             }
 
+            foreach (var player in playeSimultaneousPicksQueue.Keys) {
+                if(player == null) playeSimultaneousPicksQueue.Remove(player);
+            }
+
             WaitForSyncUpCounter = 0;
             IsAlreadyOutOfPickPhase = false;
             isInSimultaneousPickPhase = true;

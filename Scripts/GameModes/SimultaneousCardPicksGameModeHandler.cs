@@ -1,6 +1,6 @@
 ﻿using RWF.GameModes;
 
-namespace SimultaneousCardPicksGM {
+namespace SimultaneousCardPicksGM.GameModes {
     public class SimultaneousCardPicksGameModeHandler : RWFGameModeHandler<SimultaneousCardPicksGameMode> {
         internal const string GameModeName = "Simultaneous Card Picks Team Deathmatch";
         internal const string GameModeID = "Simultaneous Card Picks Team Deathmatch";
@@ -18,7 +18,7 @@ namespace SimultaneousCardPicksGM {
             maxPlayers: null,
             maxTeams: null,
             maxClients: null,
-            description: "Simultaneous Card Picks Team Deathmatch is a game mode where players pick cards simultaneously, Each player selects their cards at the same time.",
+            description: "Simultaneous Card Picks Team Deathmatch is a game mode where players pick cards simultaneously, Each player selects their cards at the same time.\n<color=red>Some cards may break in this gamemode.</color>",
             videoURL: "https://github.com/olavim/RoundsWithFriends/raw/main/Media/TeamDeathmatch.mp4"
             ) { }
     }
