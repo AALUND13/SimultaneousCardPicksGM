@@ -44,8 +44,8 @@ namespace SimultaneousCardPicksGM {
             return null;
         }
 
-        public static bool IsSimultaneousCardPicksGameMode() {
-            return GameModeManager.CurrentHandler is SimultaneousCardPicksGameModeHandler;
+        public static bool IsInSimultaneousPickPhase() {
+            return SimultaneousPicksHandler.Instance.IsInSimultaneousPickPhase;
         }
     }
 }

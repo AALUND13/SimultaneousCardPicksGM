@@ -14,11 +14,6 @@ using UnboundLib.Networking;
 
 namespace SimultaneousCardPicksGM {
     public class SimultaneousCardPicksGameMode : RWFGameMode {
-        private static int PlayerOutOfPickPhase = 0;
-        private static int MinimumPlayersToStart = 0;
-
-        private static bool IsAlreadyOutOfPickPhase = false;
-
         public override IEnumerator DoStartGame() {
             CardBarHandler.instance.Rebuild();
             UIHandler.instance.InvokeMethod("SetNumberOfRounds", (int)GameModeManager.CurrentHandler.Settings["roundsToWinGame"]);
@@ -96,61 +91,19 @@ namespace SimultaneousCardPicksGM {
 
             StartCoroutine(DoRoundStart());
         }
+
+
         private IEnumerator StartPickPhase(int[] winningTeamIDs = null) {
-            yield return GameModeManager.TriggerHook(GameModeHooks.HookPickStart);
             List<Player> pickOrder = PlayerManager.instance.GetPickOrder(winningTeamIDs);
 
-            PlayerOutOfPickPhase = 0;
-            MinimumPlayersToStart = pickOrder.Count;
-            IsAlreadyOutOfPickPhase = false;
-
+            Dictionary<Player, int> playerPickCounts = new Dictionary<Player, int>();
             foreach(Player player in pickOrder) {
                 if(winningTeamIDs == null || !winningTeamIDs.Contains(player.teamID)) {
-                    yield return WaitForSyncUp();
-
-                    if(player.data.view.IsMine) {
-                        CardChoiceVisuals.instance.Show(player.playerID, true);
-                    }
-
-                    StartCoroutine(DoPick(player.playerID, PickerType.Player));
+                    playerPickCounts[player] = 1;
                 }
             }
 
-            this.ExecuteAfterFrames(10, () => {
-                foreach(Player player in pickOrder) {
-                    if(player.data.view.IsMine) {
-                        CardChoice.instance.pickrID = player.playerID;
-                    }
-                }
-            });
-
-            while(PlayerOutOfPickPhase < MinimumPlayersToStart) {
-                yield return null;
-            }
-
-            yield return new WaitForSecondsRealtime(0.1f);
-
-            yield return WaitForSyncUp();
-            CardChoiceVisuals.instance.Hide();
-
-            yield return GameModeManager.TriggerHook(GameModeHooks.HookPickEnd);
-        }
-
-        private IEnumerator DoPick(int playerID, PickerType pickerType) {
-            yield return GameModeManager.TriggerHook(GameModeHooks.HookPlayerPickStart);
-            yield return CardChoice.instance.DoPick(1, playerID, pickerType);
-
-            if(!IsAlreadyOutOfPickPhase) {
-                NetworkingManager.RPC(typeof(SimultaneousCardPicksGameMode), nameof(RPCS_PlayerOutOfPickPhase));
-                IsAlreadyOutOfPickPhase = true;
-            }
-
-            yield return GameModeManager.TriggerHook(GameModeHooks.HookPlayerPickEnd);
-        }
-
-        [UnboundRPC]
-        private static void RPCS_PlayerOutOfPickPhase() {
-            PlayerOutOfPickPhase++;
+            yield return SimultaneousPicksHandler.Instance.StartSimultaneousPickPhase(playerPickCounts, WaitForSyncUp);
         }
     }
 }

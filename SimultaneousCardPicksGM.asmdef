@@ -15,7 +15,8 @@
         "BepInEx.dll",
         "Assembly-CSharp.dll",
         "PhotonRealtime.dll",
-        "PhotonUnityNetworking.dll"
+        "PhotonUnityNetworking.dll",
+        "Photon3Unity3D.dll"
     ],
     "autoReferenced": true,
     "defineConstraints": []

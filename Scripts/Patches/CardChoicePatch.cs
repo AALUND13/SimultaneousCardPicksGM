@@ -45,12 +45,11 @@ namespace SimultaneousCardPicksGM.Patches {
 
         [HarmonyPatch("ReplaceCards", MethodType.Enumerator)]
         [HarmonyTranspiler]
-        [HarmonyDebug]
         public static IEnumerable<CodeInstruction> ReplaceCardsTranspiler(IEnumerable<CodeInstruction> instructions, ILGenerator il) {
             UnityEngine.Debug.Log("SimultaneousCardPicksGM: Patching ReplaceCards to HideCardsFromOtherPlayers in Simultaneous Card Picks Game Mode.");
             var codes = new List<CodeInstruction>(instructions);
 
-            MethodInfo isSimMethod = AccessTools.Method(typeof(Utils), nameof(Utils.IsSimultaneousCardPicksGameMode));
+            MethodInfo isSimMethod = AccessTools.Method(typeof(Utils), nameof(Utils.IsInSimultaneousPickPhase));
             MethodInfo hideCardsMethod = AccessTools.Method(typeof(CardChoicePatch), nameof(HideCardsFromOtherPlayers));
             MethodInfo getItemFieldMethod = AccessTools.Method(typeof(List<GameObject>), "get_Item");
 
@@ -148,7 +147,7 @@ namespace SimultaneousCardPicksGM.Patches {
         public static bool IsPlayerInSimCardPicksMode(int playerID) {
             Player player = PlayerManager.instance.players.Find(p => p.playerID == playerID);
 
-            bool checkResult = !(GameModeManager.CurrentHandler is SimultaneousCardPicksGameModeHandler) || player == null || player.data.view.IsMine;
+            bool checkResult = !Utils.IsInSimultaneousPickPhase() || player == null || player.data.view.IsMine;
             return checkResult;
         }
 
@@ -162,18 +161,12 @@ namespace SimultaneousCardPicksGM.Patches {
 
         private static bool IsPlayerIsMyAndInSimultaneousPicksGameMode(int playerID) {
             Player player = PlayerManager.instance.players.Find(p => p.playerID == playerID);
-            bool checkResult = GameModeManager.CurrentHandler is SimultaneousCardPicksGameModeHandler && player != null && !player.data.view.IsMine;
-
-            UnityEngine.Debug.Log($"IsPlayerIsMyAndInSimultaneousPicksGameMode({playerID}) = {checkResult} (CurrentHandler: {GameModeManager.CurrentHandler?.GetType().Name}, Player: {(player != null ? player.data.view.IsMine.ToString() : "null")})");
-
+            bool checkResult = Utils.IsInSimultaneousPickPhase() && player != null && !player.data.view.IsMine;
             return checkResult;
         }
 
         private static bool IsPickerIdIsMe() {
             Player player = PlayerManager.instance.players.Find(p => p.playerID == CardChoice.instance.pickrID);
-
-            UnityEngine.Debug.Log($"IsPickerIdIsMe() = {player != null && player.data.view.IsMine} (PickerID: {CardChoice.instance.pickrID}, Player: {(player != null ? player.data.view.IsMine.ToString() : "null")})");
-
             return player != null && player.data.view.IsMine;
         }
 

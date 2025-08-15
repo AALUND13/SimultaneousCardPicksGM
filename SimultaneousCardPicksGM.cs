@@ -23,6 +23,7 @@ namespace SimultaneousCardPicksGM {
             new Harmony(modId).PatchAll();
 
             assets = Jotunn.Utils.AssetUtils.LoadAssetBundleFromResources("simultaneouscardpicksgm_assets", typeof(SimultaneousCardPicksGM).Assembly);
+            gameObject.AddComponent<SimultaneousPicksHandler>();
 
             Debug.Log($"{modName} loaded!");
         }

@@ -12,7 +12,7 @@ namespace SimultaneousCardPicksGM.Patches {
         [HarmonyPatch("SetCurrentSelected")]
         [HarmonyPrefix]
         public static bool SetCurrentSelectedPrefix(CardChoiceVisuals __instance, int toSet) {
-            if (Utils.IsSimultaneousCardPicksGameMode()) {
+            if (Utils.IsInSimultaneousPickPhase()) {
                 __instance.InvokeMethod("RPCA_SetCurrentSelected", toSet);
                 return false;
             }
