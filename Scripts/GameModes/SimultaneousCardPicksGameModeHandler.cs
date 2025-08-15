@@ -2,8 +2,8 @@
 
 namespace SimultaneousCardPicksGM.GameModes {
     public class SimultaneousCardPicksGameModeHandler : RWFGameModeHandler<SimultaneousCardPicksGameMode> {
-        internal const string GameModeName = "Simultaneous Card Picks Team Deathmatch";
-        internal const string GameModeID = "Simultaneous Card Picks Team Deathmatch";
+        internal const string GameModeName = "Simultaneous Picks Team Deathmatch";
+        internal const string GameModeID = "Simultaneous Picks Team Deathmatch";
 
         public override bool OnlineOnly => true;
 

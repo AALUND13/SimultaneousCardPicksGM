@@ -33,7 +33,7 @@ namespace SimultaneousCardPicksGM {
             Debug.Log($"{modName} loaded!");
         }
         void Start() {
-            GameModeManager.AddHandler<SimultaneousCardPicksGameMode>("Simultaneous Card Picks Team Deathmatch", new SimultaneousCardPicksGameModeHandler());
+            GameModeManager.AddHandler<SimultaneousCardPicksGameMode>(SimultaneousCardPicksGameModeHandler.GameModeID, new SimultaneousCardPicksGameModeHandler());
 
             Debug.Log($"{modName} started!");
         }

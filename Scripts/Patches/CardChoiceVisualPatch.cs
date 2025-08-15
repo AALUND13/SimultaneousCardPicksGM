@@ -13,7 +13,7 @@ namespace SimultaneousCardPicksGM.Patches {
         [HarmonyPatch("SetCurrentSelected")]
         [HarmonyPrefix]
         public static bool SetCurrentSelectedPrefix(CardChoiceVisuals __instance, int toSet) {
-            if(SimultaneousPicksHandler.IsSimultaneousPickPhaseInProgress()) {
+            if(SimultaneousPicksHandler.IsSimultaneousPickPhaseActive()) {
                 __instance.InvokeMethod("RPCA_SetCurrentSelected", toSet);
                 return false;
             }
@@ -24,7 +24,7 @@ namespace SimultaneousCardPicksGM.Patches {
         [HarmonyPrefix]
         public static bool ShowPrefix(CardChoiceVisuals __instance, int pickerID) {
             Player player = PlayerManager.instance.players.FirstOrDefault(p => p.playerID == pickerID);
-            if(SimultaneousPicksHandler.IsSimultaneousPickPhaseInProgress() && !player.data.view.IsMine) {
+            if(SimultaneousPicksHandler.IsSimultaneousPickPhaseActive() && !player.data.view.IsMine) {
                 return false;
             }
             return true;
@@ -36,7 +36,7 @@ namespace SimultaneousCardPicksGM.Patches {
         public static IEnumerable<CodeInstruction> ShowTranspiler(IEnumerable<CodeInstruction> instructions, ILGenerator il) {
             var codes = new List<CodeInstruction>(instructions);
 
-            MethodInfo IsSimultaneousPickPhaseInProgressMethod = AccessTools.Method(typeof(SimultaneousPicksHandler), nameof(SimultaneousPicksHandler.IsSimultaneousPickPhaseInProgress));
+            MethodInfo IsSimultaneousPickPhaseInProgressMethod = AccessTools.Method(typeof(SimultaneousPicksHandler), nameof(SimultaneousPicksHandler.IsSimultaneousPickPhaseActive));
             MethodInfo PhotonViewRPCMethod = AccessTools.Method(typeof(PhotonView), nameof(PhotonView.RPC), new[] { typeof(string), typeof(RpcTarget), typeof(object[]) });
             MethodInfo SetFaceLocallyMethod = AccessTools.Method(typeof(CardChoiceVisualPatch), nameof(CalledRPCA_SetFaceLocally));
             MethodInfo GetComponentPhotonViewMethod = typeof(Component)
@@ -84,7 +84,7 @@ namespace SimultaneousCardPicksGM.Patches {
         }
 
         private static void CalledRPCA_SetFaceLocally(CardChoiceVisuals instance, PlayerFace face) {
-            if(SimultaneousPicksHandler.IsSimultaneousPickPhaseInProgress()) {
+            if(SimultaneousPicksHandler.IsSimultaneousPickPhaseActive()) {
                 CharacterCreatorItemEquipper itemEquipper = instance.GetComponent<CharacterCreatorItemEquipper>();
                 itemEquipper.InvokeMethod("RPCA_SetFace", face.eyeID, face.eyeOffset, face.mouthID, face.mouthOffset, face.detailID, face.detailOffset, face.detail2ID, face.detail2Offset);
             }

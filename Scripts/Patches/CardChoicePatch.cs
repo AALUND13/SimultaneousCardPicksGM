@@ -1,5 +1,6 @@
 ﻿using HarmonyLib;
 using Photon.Pun;
+using Photon.Realtime;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -15,7 +16,7 @@ namespace SimultaneousCardPicksGM.Patches {
         [HarmonyPostfix]
         public static void StartPickPostfix(CardChoice __instance, int pickerIDToSet) {
             UnityEngine.Debug.Log("SimultaneousCardPicksGM: Patching StartPick to set pickrID in Simultaneous Card Picks Game Mode.");
-            if(SimultaneousPicksHandler.IsSimultaneousPickPhaseInProgress()) {
+            if(SimultaneousPicksHandler.IsSimultaneousPickPhaseActive()) {
                 Player player = PlayerManager.instance.players.Find(p => p.playerID == pickerIDToSet);
                 if(player != null && !player.data.view.IsMine) {
                     __instance.IsPicking = false;
@@ -64,7 +65,7 @@ namespace SimultaneousCardPicksGM.Patches {
             UnityEngine.Debug.Log("SimultaneousCardPicksGM: Patching ReplaceCards to HideCardsFromOtherPlayers in Simultaneous Card Picks Game Mode.");
             var codes = new List<CodeInstruction>(instructions);
 
-            MethodInfo IsSimultaneousPickPhaseInProgressMethod = AccessTools.Method(typeof(SimultaneousPicksHandler), nameof(SimultaneousPicksHandler.IsSimultaneousPickPhaseInProgress));
+            MethodInfo IsSimultaneousPickPhaseInProgressMethod = AccessTools.Method(typeof(SimultaneousPicksHandler), nameof(SimultaneousPicksHandler.IsSimultaneousPickPhaseActive));
             MethodInfo hideCardsMethod = AccessTools.Method(typeof(CardChoicePatch), nameof(HideCardsFromOtherPlayers));
             MethodInfo getItemFieldMethod = AccessTools.Method(typeof(List<GameObject>), "get_Item");
 
@@ -133,7 +134,7 @@ namespace SimultaneousCardPicksGM.Patches {
         [HarmonyPatch(nameof(CardChoice.DoPick), MethodType.Enumerator)]
         [HarmonyTranspiler]
         public static IEnumerable<CodeInstruction> DoPickTranspiler(IEnumerable<CodeInstruction> instructions, ILGenerator il) {
-            UnityEngine.Debug.Log("SimultaneousCardPicksGM: Patching DoPick to prevent \"CardChoiceVisuals.Hide()\" from getting called in Simultaneous Card Picks Game Mode.");
+            UnityEngine.Debug.Log("SimultaneousCardPicksGM: Patching PickRoutine to prevent \"CardChoiceVisuals.Hide()\" from getting called in Simultaneous Card Picks Game Mode.");
             var codes = new List<CodeInstruction>(instructions);
 
             MethodInfo isMyPlayerInGameModeMethod = AccessTools.Method(typeof(CardChoicePatch), nameof(IsPlayerIsMyAndInSimultaneousPicksGameMode));
@@ -154,11 +155,22 @@ namespace SimultaneousCardPicksGM.Patches {
                     };
                     codes.InsertRange(i - 1, injectedInstructions);
 
-                    UnityEngine.Debug.Log("SimultaneousCardPicksGM: Patched a call to CardChoiceVisuals.Hide() in DoPick.");
+                    UnityEngine.Debug.Log("SimultaneousCardPicksGM: Patched a call to CardChoiceVisuals.Hide() in PickRoutine.");
                     i += injectedInstructions.Length;
                 }
             }
             return codes;
+        }
+
+        [HarmonyPatch(nameof(CardChoice.DoPick))]
+        [HarmonyPrefix]
+        public static void DoPickPrefix(CardChoice __instance, int picketIDToSet) {
+            UnityEngine.Debug.Log("SimultaneousCardPicksGM: Patching PickRoutine to set pickrID in Simultaneous Card Picks Game Mode.");
+            
+            Player player = PlayerManager.instance.players.Find(p => p.playerID == picketIDToSet);
+            if(SimultaneousPicksHandler.IsSimultaneousPickPhaseActive() && player != null && player.data.view.IsMine) {
+                OutOfPickPhaseDisplay.Instance.SetActive(false);
+            }
         }
 
         public static void DesroyCards(int[] cardIDs) {
@@ -171,7 +183,7 @@ namespace SimultaneousCardPicksGM.Patches {
         public static bool IsPlayerInSimCardPicksMode(int playerID) {
             Player player = PlayerManager.instance.players.Find(p => p.playerID == playerID);
 
-            bool checkResult = !SimultaneousPicksHandler.IsSimultaneousPickPhaseInProgress() || player == null || player.data.view.IsMine;
+            bool checkResult = !SimultaneousPicksHandler.IsSimultaneousPickPhaseActive() || player == null || player.data.view.IsMine;
             return checkResult;
         }
 
@@ -185,7 +197,7 @@ namespace SimultaneousCardPicksGM.Patches {
 
         private static bool IsPlayerIsMyAndInSimultaneousPicksGameMode(int playerID) {
             Player player = PlayerManager.instance.players.Find(p => p.playerID == playerID);
-            bool checkResult = SimultaneousPicksHandler.IsSimultaneousPickPhaseInProgress() && player != null && !player.data.view.IsMine;
+            bool checkResult = SimultaneousPicksHandler.IsSimultaneousPickPhaseActive() && player != null && !player.data.view.IsMine;
             return checkResult;
         }
 
