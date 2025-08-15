@@ -3,7 +3,8 @@
     "references": [
         "ModdingUtils",
         "UnboundLib",
-        "RoundsWithFriends"
+        "RoundsWithFriends",
+        "Unity.TextMeshPro"
     ],
     "optionalUnityReferences": [],
     "includePlatforms": [],

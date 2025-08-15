@@ -26,6 +26,10 @@ namespace SimultaneousCardPicksGM {
             assets = Jotunn.Utils.AssetUtils.LoadAssetBundleFromResources("simultaneouscardpicksgm_assets", typeof(SimultaneousCardPicksGM).Assembly);
             gameObject.AddComponent<SimultaneousPicksHandler>();
 
+            GameObject outOfPickPhaseDisplay = Instantiate(assets.LoadAsset<GameObject>("OutOfPickPhaseDisplay"));
+            outOfPickPhaseDisplay.GetComponent<OutOfPickPhaseDisplay>().SetActive(false);
+            DontDestroyOnLoad(outOfPickPhaseDisplay);
+
             Debug.Log($"{modName} loaded!");
         }
         void Start() {
