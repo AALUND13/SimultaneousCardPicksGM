@@ -228,6 +228,16 @@ namespace SimultaneousCardPicksGM.Patches {
                     child.gameObject.SetActive(false);
                 }
             }
+
+            Unbound.Instance.ExecuteAfterFrames(10, () => {
+                foreach(GameObject card in cards) {
+                    if (card == null) continue;
+                    GameObject cardBase = card.GetComponentInChildren<CardInfoDisplayer>().gameObject;
+                    foreach(Transform child in cardBase.transform) {
+                        child.gameObject.SetActive(false);
+                    }
+                }
+            });
         }
     }
 }
