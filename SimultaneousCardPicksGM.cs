@@ -1,14 +1,19 @@
 using BepInEx;
 using HarmonyLib;
-using UnityEngine;
+using SimultaneousCardPicksGM.GameModes;
+using SimultaneousCardPicksGM.Patches;
+using System.Collections.Generic;
+using System.Reflection;
 using UnboundLib;
 using UnboundLib.GameModes;
-using SimultaneousCardPicksGM.GameModes;
+using UnityEditor.VersionControl;
+using UnityEngine;
 
 namespace SimultaneousCardPicksGM {
     [BepInDependency("pykess.rounds.plugins.moddingutils", BepInDependency.DependencyFlags.HardDependency)]
     [BepInDependency("com.willis.rounds.unbound", BepInDependency.DependencyFlags.HardDependency)]
     [BepInDependency("io.olavim.rounds.rwf", BepInDependency.DependencyFlags.HardDependency)]
+    [BepInDependency("ot.dan.rounds.picktimer", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInPlugin(modId, modName, "1.0.0")]
     [BepInProcess("Rounds.exe")]
     public class SimultaneousCardPicksGM : BaseUnityPlugin {
@@ -18,10 +23,12 @@ namespace SimultaneousCardPicksGM {
         
         internal static SimultaneousCardPicksGM instance;
         internal static AssetBundle assets;
-        
+        internal static Harmony harmony;
+
         void Awake() {
             instance = this;
-            new Harmony(modId).PatchAll();
+            harmony = new Harmony(modId);
+            harmony.PatchAll(Assembly.GetExecutingAssembly());
 
             assets = Jotunn.Utils.AssetUtils.LoadAssetBundleFromResources("simultaneouscardpicksgm_assets", typeof(SimultaneousCardPicksGM).Assembly);
             gameObject.AddComponent<SimultaneousPicksHandler>();
@@ -33,6 +40,11 @@ namespace SimultaneousCardPicksGM {
             Debug.Log($"{modName} loaded!");
         }
         void Start() {
+            List<BaseUnityPlugin> Plugins = (List<BaseUnityPlugin>)typeof(BepInEx.Bootstrap.Chainloader).GetField("_plugins", BindingFlags.NonPublic | BindingFlags.Static).GetValue(null);
+            if(Plugins.Exists(plugin => plugin.Info.Metadata.GUID == "ot.dan.rounds.picktimer")) {
+                PickTimerPatch.ApplyPatch(harmony);
+            }
+
             GameModeManager.AddHandler<SimultaneousCardPicksGameMode>(SimultaneousCardPicksGameModeHandler.GameModeID, new SimultaneousCardPicksGameModeHandler());
 
             Debug.Log($"{modName} started!");

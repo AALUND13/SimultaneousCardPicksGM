@@ -12,6 +12,8 @@ using UnityEngine;
 namespace SimultaneousCardPicksGM.Patches {
     [HarmonyPatch(typeof(CardChoice))]
     internal class CardChoicePatch {
+        public static Player LastPickerPlayer { get; private set; }
+
         [HarmonyPatch(nameof(CardChoice.StartPick))]
         [HarmonyPostfix]
         public static void StartPickPostfix(CardChoice __instance, int pickerIDToSet) {
@@ -84,12 +86,12 @@ namespace SimultaneousCardPicksGM.Patches {
             for(int i = 0; i < codes.Count; i++) {
                 if(codes[i].opcode == OpCodes.Stloc_2 && codes[i - 1].LoadsField(indexField) && codes[i - 2].opcode == OpCodes.Ldarg_0) {
                     if(index == 1) {
-                        var skipLabel = il.DefineLabel();
-                        codes[i + 1].labels.Add(skipLabel);
+                        var continueLable = il.DefineLabel();
+                        codes[i + 1].labels.Add(continueLable);
 
                         CodeInstruction[] injectedInstructions = new CodeInstruction[] {
                             new CodeInstruction(OpCodes.Call, IsSimultaneousPickPhaseInProgressMethod), // Call IsSimultaneousCardPicksGameMode
-                            new CodeInstruction(OpCodes.Brfalse, skipLabel), // if false -> continue
+                            new CodeInstruction(OpCodes.Brfalse, continueLable), // if false -> continue
                             new CodeInstruction(OpCodes.Ldloc_1), // Load the this (CardChoice instance)
                             new CodeInstruction(OpCodes.Ldfld, spawnedCardsField), // Load spawnedCards
                             new CodeInstruction(OpCodes.Ldarg_0), // Load this ('<IDoEndPick>d__17' instance)
@@ -173,14 +175,25 @@ namespace SimultaneousCardPicksGM.Patches {
             }
         }
 
-        public static void DesroyCards(int[] cardIDs) {
+        [HarmonyPatch("RPCA_DoEndPick")]
+        [HarmonyPrefix]
+        [HarmonyPriority(Priority.First)]
+        public static void RPCA_DoEndPickPrefix(CardChoice __instance, int pickId) {
+            Player player = PlayerManager.instance.players.Find(p => p.playerID == pickId);
+            if(player != null) {
+                LastPickerPlayer = player;
+            }
+        }
+
+
+        private static void DesroyCards(int[] cardIDs) {
             List<GameObject> cards = (List<GameObject>)CardChoice.instance.InvokeMethod("CardFromIDs", cardIDs);
             foreach(GameObject card in cards) {
                 GameObject.Destroy(card);
             }
         }
 
-        public static bool IsPlayerInSimCardPicksMode(int playerID) {
+        private static bool IsPlayerInSimCardPicksMode(int playerID) {
             Player player = PlayerManager.instance.players.Find(p => p.playerID == playerID);
 
             bool checkResult = !SimultaneousPicksHandler.IsSimultaneousPickPhaseActive() || player == null || player.data.view.IsMine;

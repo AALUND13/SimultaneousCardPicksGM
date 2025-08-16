@@ -32,7 +32,6 @@ namespace SimultaneousCardPicksGM.Patches {
 
         [HarmonyPatch("Show")]
         [HarmonyTranspiler]
-        [HarmonyDebug]
         public static IEnumerable<CodeInstruction> ShowTranspiler(IEnumerable<CodeInstruction> instructions, ILGenerator il) {
             var codes = new List<CodeInstruction>(instructions);
 

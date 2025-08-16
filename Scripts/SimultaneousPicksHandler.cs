@@ -75,6 +75,7 @@ namespace SimultaneousCardPicksGM {
             ToggleOutOfPickDisplayIfPicking(localPlayer, true);
             yield return GameModeManager.TriggerHook(GameModeHooks.HookPickStart);
             yield return WaitForPlayerSync();
+            waitForSyncCounter = 0;
 
             ToggleOutOfPickDisplayIfPicking(localPlayer, false);
             SetPlayerStateIfPicking(localPlayer, SimultaneousPickPlayerState.Picking);
@@ -88,7 +89,7 @@ namespace SimultaneousCardPicksGM {
                     CardChoiceVisuals.instance.Show(player.Key.playerID, true);
                 }
 
-                StartCoroutine(PickRoutine(player.Key.playerID, PickerType.Player));
+                yield return PickRoutine(player.Key.playerID, PickerType.Player);
             }
 
             this.ExecuteAfterFrames(10, () => {
@@ -99,15 +100,10 @@ namespace SimultaneousCardPicksGM {
                 }
             });
 
-            while(!playerSimultaneousPicksQueue.All(p => p.Value <= 0)) {
-                yield return null;
-            }
-
             yield return new WaitForSecondsRealtime(0.1f);
             yield return WaitForSyncUp;
             CardChoiceVisuals.instance.Hide();
 
-            waitForSyncCounter = 0;
 
             ToggleOutOfPickDisplayIfPicking(localPlayer, false);
             yield return GameModeManager.TriggerHook(GameModeHooks.HookPickEnd);
@@ -171,6 +167,7 @@ namespace SimultaneousCardPicksGM {
                 NetworkingManager.RPC(typeof(SimultaneousPicksHandler), nameof(RPCS_SetPlayerState), player.playerID, state);
             }
         }
+
 
 
         private IEnumerator WaitForPlayerSync() {

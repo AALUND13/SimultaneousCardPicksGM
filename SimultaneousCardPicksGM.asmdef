@@ -4,7 +4,8 @@
         "ModdingUtils",
         "UnboundLib",
         "RoundsWithFriends",
-        "Unity.TextMeshPro"
+        "Unity.TextMeshPro",
+        "PickTimer"
     ],
     "optionalUnityReferences": [],
     "includePlatforms": [],
