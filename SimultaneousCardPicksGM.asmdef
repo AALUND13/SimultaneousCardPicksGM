@@ -5,7 +5,8 @@
         "UnboundLib",
         "RoundsWithFriends",
         "Unity.TextMeshPro",
-        "PickTimer"
+        "PickTimer",
+        "PickNCards"
     ],
     "optionalUnityReferences": [],
     "includePlatforms": [],

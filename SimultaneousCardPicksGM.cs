@@ -1,12 +1,13 @@
 using BepInEx;
 using HarmonyLib;
 using SimultaneousCardPicksGM.GameModes;
+using SimultaneousCardPicksGM.Monobehaviours;
 using SimultaneousCardPicksGM.Patches;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using UnboundLib;
 using UnboundLib.GameModes;
-using UnityEditor.VersionControl;
 using UnityEngine;
 
 namespace SimultaneousCardPicksGM {
@@ -42,7 +43,14 @@ namespace SimultaneousCardPicksGM {
         void Start() {
             List<BaseUnityPlugin> Plugins = (List<BaseUnityPlugin>)typeof(BepInEx.Bootstrap.Chainloader).GetField("_plugins", BindingFlags.NonPublic | BindingFlags.Static).GetValue(null);
             if(Plugins.Exists(plugin => plugin.Info.Metadata.GUID == "ot.dan.rounds.picktimer")) {
-                PickTimerPatch.ApplyPatch(harmony);
+                PickTimerPatch.Patch(harmony);
+            }
+            if(Plugins.Exists(plugin => plugin.Info.Metadata.GUID == "pykess.rounds.plugins.pickncards")) {
+                PickNCardsPatch.Patch(harmony);
+            }
+            BaseUnityPlugin mod = Plugins.FirstOrDefault(plugin => plugin.Info.Metadata.GUID == "com.willuwontu.rounds.gamemodes");
+            if(mod != null) {
+                WillsWackyGamemodesStartingPickPatch.Patch(harmony, mod.GetType().Assembly);
             }
 
             GameModeManager.AddHandler<SimultaneousCardPicksGameMode>(SimultaneousCardPicksGameModeHandler.GameModeID, new SimultaneousCardPicksGameModeHandler());

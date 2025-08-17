@@ -8,8 +8,8 @@ using System.Threading.Tasks;
 using TMPro;
 using UnityEngine;
 
-namespace SimultaneousCardPicksGM {
-    public class OutOfPickPhaseDisplay : MonoBehaviour {
+namespace SimultaneousCardPicksGM.Monobehaviours {
+    internal class OutOfPickPhaseDisplay : MonoBehaviour {
         public static OutOfPickPhaseDisplay Instance { get; private set; }
 
         [TextArea(3, 15)]
@@ -52,7 +52,6 @@ namespace SimultaneousCardPicksGM {
                 OutOfPickPhaseTextMesh.text = string.Format(OutOfPickPhaseText, PlayerList.ToString());
             }
         }
-
 
         private void Awake() {
             if (Instance == null) {

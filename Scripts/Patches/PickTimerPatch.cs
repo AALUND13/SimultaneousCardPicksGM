@@ -7,7 +7,7 @@ using System.Reflection.Emit;
 
 namespace SimultaneousCardPicksGM.Patches {
     public class PickTimerPatch {
-        public static void ApplyPatch(Harmony harmony) {
+        public static void Patch(Harmony harmony) {
             Type targetType = typeof(PickTimer.PickTimer)
                 .Assembly
                 .GetType("PickTimer.Util.CardChoicePatchRPCA_DoEndPick", true);

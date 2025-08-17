@@ -1,6 +1,7 @@
 ﻿using HarmonyLib;
 using Photon.Pun;
 using Photon.Realtime;
+using SimultaneousCardPicksGM.Monobehaviours;
 using System;
 using System.Collections.Generic;
 using System.Reflection;

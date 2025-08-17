@@ -69,8 +69,6 @@ namespace SimultaneousCardPicksGM.GameModes {
             PlayerManager.instance.SetPlayersSimulated(false);
             TimeHandler.instance.DoSpeedUp();
 
-            yield return GameModeManager.TriggerHook(GameModeHooks.HookPickStart);
-
             PlayerManager.instance.InvokeMethod("SetPlayersVisible", false);
 
             yield return StartPickPhase(winningTeamIDs);
@@ -102,7 +100,7 @@ namespace SimultaneousCardPicksGM.GameModes {
                 }
             }
 
-            yield return SimultaneousPicksHandler.Instance.StartSimultaneousPickPhase(playerPickCounts, WaitForSyncUp);
+            yield return SimultaneousPicksHandler.Instance.StartSimultaneousPickPhase(playerPickCounts);
         }
     }
 }

@@ -60,7 +60,7 @@ Canvas:
   m_SortingBucketNormalizedSize: 0
   m_AdditionalShaderChannelsFlag: 25
   m_SortingLayerID: 0
-  m_SortingOrder: 0
+  m_SortingOrder: -1
   m_TargetDisplay: 0
 --- !u!114 &6779856057255879349
 MonoBehaviour:
@@ -122,15 +122,11 @@ MonoBehaviour:
   m_GameObject: {fileID: 4714131454266997436}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1694db34063874c4a8ff0e5d78a6f6ee, type: 3}
+  m_Script: {fileID: 11500000, guid: adb7988b27383674095ffa6cb820a786, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  OutOfPickPhaseText: 'Please wait for all players to finish picking cards.
-
-
-    <b><color=#ffff>Picking Players:</b></color>
-
-    {0}'
+  OutOfPickPhaseText: "Please wait for all players to finish picking cards.\r\n\r\n\r<b><color=#ffff>Picking
+    Players:</b></color>\r\n\r{0}"
   OutOfPickPhaseTextMesh: {fileID: 2022993118745891585}
   CanvasGroup: {fileID: 943745553313497416}
 --- !u!1 &6946087698229869040
