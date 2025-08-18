@@ -90,11 +90,13 @@ namespace SimultaneousCardPicksGM.Handlers {
 
             SetPlayerStateIfPicking(SimultaneousPickPlayerState.Picking);
 
+            yield return GameModeManager.TriggerHook(SimultaneousPicksHooks.OnSimultaneousPickStart);
             foreach(var player in playerPickCounts) {
                 if(player.Value <= 0) continue;
 
                 StartCoroutine(PickRoutine(player.Key.playerID, PickerType.Player));
             }
+            yield return GameModeManager.TriggerHook(SimultaneousPicksHooks.OnSimultaneousPickEnd);
 
             // Wait for all players to finish picking
             // Without this could cause desyncs issues if players finish at different times
@@ -254,7 +256,6 @@ namespace SimultaneousCardPicksGM.Handlers {
 
         private IEnumerator PickRoutine(int playerID, PickerType pickerType) {
             Player player = PlayerManager.instance.players.FirstOrDefault(p => p.playerID == playerID);
-            yield return GameModeManager.TriggerHook(SimultaneousPicksHooks.OnSimultaneousPickStart);
             if(player.data.view.IsMine) {
 
                 int PlayerSimultaneousPicks = 1;
@@ -282,7 +283,6 @@ namespace SimultaneousCardPicksGM.Handlers {
 
             }
             yield return WaitForPlayerSync(playerID);
-            yield return GameModeManager.TriggerHook(SimultaneousPicksHooks.OnSimultaneousPickEnd);
         }
 
         #region 
