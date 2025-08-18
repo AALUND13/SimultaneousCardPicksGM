@@ -11,6 +11,7 @@ using UnboundLib.GameModes;
 using UnityEngine;
 using RWF;
 using UnboundLib.Networking;
+using SimultaneousCardPicksGM.Handlers;
 
 namespace SimultaneousCardPicksGM.GameModes {
     public class SimultaneousCardPicksGameMode : RWFGameMode {

@@ -19,7 +19,8 @@
         "Assembly-CSharp.dll",
         "PhotonRealtime.dll",
         "PhotonUnityNetworking.dll",
-        "Photon3Unity3D.dll"
+        "Photon3Unity3D.dll",
+        "InControl.dll"
     ],
     "autoReferenced": true,
     "defineConstraints": []

@@ -2,6 +2,7 @@
 using Photon.Pun;
 using RWF;
 using SimultaneousCardPicksGM;
+using SimultaneousCardPicksGM.Handlers;
 using SimultaneousCardPicksGM.Patches;
 using System;
 using System.Collections;

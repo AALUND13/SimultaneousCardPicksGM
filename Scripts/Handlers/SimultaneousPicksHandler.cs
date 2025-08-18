@@ -1,14 +1,16 @@
 ﻿using SimultaneousCardPicksGM.Monobehaviours;
+using SimultaneousCardPicksGM.Patches;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using UnboundLib;
 using UnboundLib.GameModes;
 using UnboundLib.Networking;
 using UnityEngine;
 
-namespace SimultaneousCardPicksGM {
+namespace SimultaneousCardPicksGM.Handlers {
     public enum SimultaneousPickPlayerState {
         ReadyToPick,
         Picking,
@@ -18,19 +20,27 @@ namespace SimultaneousCardPicksGM {
 
     public class SimultaneousPicksHandler : MonoBehaviour {
         public static SimultaneousPicksHandler Instance { get; private set; }
-        public IReadOnlyDictionary<Player, int> PlayerSimultaneousPicksQueue => playerSimultaneousPicksQueue;
-        public IReadOnlyDictionary<Player, SimultaneousPickPlayerState> PlayerStates => playerPickStates;
+        public IReadOnlyDictionary<Player, int> PlayerSimultaneousPicksQueue => new ReadOnlyDictionary<Player, int>(playerSimultaneousPicksQueue);
+        public IReadOnlyDictionary<Player, SimultaneousPickPlayerState> PlayerStates => new ReadOnlyDictionary<Player, SimultaneousPickPlayerState>(playerPickStates);
+        public IReadOnlyDictionary<Player, IReadOnlyList<GameObject>> PlayerSpawnedCards => new ReadOnlyDictionary<Player, IReadOnlyList<GameObject>>(playerSpwnedCards
+            .ToDictionary(kvp => kvp.Key, kvp => (IReadOnlyList<GameObject>)kvp.Value));
+        public IReadOnlyList<Player> CurrentPickingPlayers => currentPickingPlayers.AsReadOnly();
+
         public bool InSimultaneousPickPhase => inSimultaneousPickPhase;
 
+
+        internal Dictionary<Player, List<GameObject>> playerSpwnedCards = new Dictionary<Player, List<GameObject>>();
 
         private static bool hasAlreadyExitedPickPhase = false;
 
         private Dictionary<Player, int> playerSimultaneousPicksQueue = new Dictionary<Player, int>();
         private Dictionary<Player, int> initialPlayerSimultaneousPicksQueue = new Dictionary<Player, int>();
         private Dictionary<Player, SimultaneousPickPlayerState> playerPickStates = new Dictionary<Player, SimultaneousPickPlayerState>();
+        private List<Player> currentPickingPlayers = new List<Player>();
 
         private bool inSimultaneousPickPhase = false;
         private int waitForSyncCounter = 0;
+        Dictionary<int, int> playerSyncCounters = new Dictionary<int, int>();
 
 
         /// <summary>
@@ -44,7 +54,10 @@ namespace SimultaneousCardPicksGM {
         /// You can use this method to start the simultaneous pick phase for your own game mode.
         /// </summary>
         public IEnumerator StartSimultaneousPickPhase(Dictionary<Player, int> playerPickCounts) {
+            Player[] localPlayers = PlayerManager.instance.players.Where(p => p.data.view.IsMine).ToArray();
+
             initialPlayerSimultaneousPicksQueue = new Dictionary<Player, int>(playerPickCounts);
+            playerSpwnedCards.Clear();
             playerPickStates.Clear();
 
             foreach(var player in playerPickCounts.Keys) {
@@ -72,7 +85,7 @@ namespace SimultaneousCardPicksGM {
 
             yield return GameModeManager.TriggerHook(GameModeHooks.HookPickStart);
             ToggleOutOfPickDisplayIfPicking(true);
-            yield return WaitForPlayerSync();
+            yield return WaitForAllPlayerSync();
             ToggleOutOfPickDisplayIfPicking(false);
 
             SetPlayerStateIfPicking(SimultaneousPickPlayerState.Picking);
@@ -80,9 +93,7 @@ namespace SimultaneousCardPicksGM {
             foreach(var player in playerPickCounts) {
                 if(player.Value <= 0) continue;
 
-                yield return WaitForPlayerSync();
-
-                yield return PickRoutine(player.Key.playerID, PickerType.Player);
+                StartCoroutine(PickRoutine(player.Key.playerID, PickerType.Player));
             }
 
             // Wait for all players to finish picking
@@ -97,14 +108,27 @@ namespace SimultaneousCardPicksGM {
             ToggleOutOfPickDisplayIfPicking(false);
             yield return GameModeManager.TriggerHook(GameModeHooks.HookPickEnd);
             SetPlayerStateIfPicking(SimultaneousPickPlayerState.PickingDone);
-
             ToggleOutOfPickDisplayIfPicking(true);
-            yield return WaitForPlayerSync();
+
+            yield return WaitForAllPlayerSync();
+            currentPickingPlayers.Clear();
+            SimultaneousPickPhaseSpectatingHandler.Instance.StopSpectating(false);
             OutOfPickPhaseDisplay.Instance.SetActive(false);
             inSimultaneousPickPhase = false;
 
             yield break;
         }
+
+
+        internal SimultaneousPickPlayerState GetPlayerState(Player player) {
+            if(player == null) throw new ArgumentNullException(nameof(player), "Player cannot be null.");
+            if(playerPickStates.TryGetValue(player, out SimultaneousPickPlayerState state)) {
+                return state;
+            } else {
+                return SimultaneousPickPlayerState.ReadyToPick;
+            }
+        }
+
 
         private void Update() {
             if(inSimultaneousPickPhase && OutOfPickPhaseDisplay.Instance.IsActive) {
@@ -129,6 +153,41 @@ namespace SimultaneousCardPicksGM {
                 }
 
                 OutOfPickPhaseDisplay.Instance.SetText(playersToShow);
+            }
+        }
+
+        internal void HideCards(GameObject[] cards) {
+            if(cards == null || cards.Length == 0) return;
+
+            foreach(GameObject card in cards) {
+                if(card == null) continue;
+
+                GameObject cardBase = card.GetComponentInChildren<CardInfoDisplayer>().gameObject;
+                foreach(Transform child in cardBase.transform) {
+                    child.gameObject.SetActive(false);
+                }
+            }
+        }
+
+        internal void ShowCards(GameObject[] cards) {
+            if(cards == null || cards.Length == 0) return;
+            foreach(GameObject card in cards) {
+                GameObject cardBase = card.GetComponentInChildren<CardInfoDisplayer>().gameObject;
+                foreach(Transform child in cardBase.transform) {
+                    child.gameObject.SetActive(true);
+                }
+
+                GeneralParticleSystem[] particles = card.GetComponentsInChildren<GeneralParticleSystem>();
+                foreach(GeneralParticleSystem particle in particles) {
+                    particle.Play();
+                }
+
+                if(CardInfoPatch.WasCardSelected(card)) {
+                    card.GetComponent<CardInfo>().RPCA_ChangeSelected(true);
+                    card.GetComponent<CardInfo>().RPCA_ChangeSelected(false);
+
+                    card.GetComponentInChildren<CurveAnimation>().PlayIn();
+                }
             }
         }
 
@@ -168,8 +227,23 @@ namespace SimultaneousCardPicksGM {
             }
         }
 
-        private IEnumerator WaitForPlayerSync() {
-            NetworkingManager.RPC(typeof(SimultaneousPicksHandler), nameof(RPCS_WaitForPlayerSync));
+        private IEnumerator WaitForPlayerSync(int playerID) {
+            if(!Instance.playerSyncCounters.ContainsKey(playerID)) {
+                Instance.playerSyncCounters[playerID] = 0;
+            }
+
+            NetworkingManager.RPC(typeof(SimultaneousPicksHandler), nameof(RPCS_WaitForPlayerToSync), playerID);
+            while(Instance.playerSyncCounters[playerID] < PlayerManager.instance.players.Count) {
+                yield return null;
+            }
+
+            if(Instance.playerSyncCounters.ContainsKey(playerID)) {
+                Instance.playerSyncCounters[playerID] = 0;
+            }
+        }
+
+        private IEnumerator WaitForAllPlayerSync() {
+            NetworkingManager.RPC(typeof(SimultaneousPicksHandler), nameof(RPCS_WaitForAllPlayersToSync));
 
             while(Instance.waitForSyncCounter < PlayerManager.instance.players.Count) {
                 yield return null;
@@ -180,8 +254,8 @@ namespace SimultaneousCardPicksGM {
 
         private IEnumerator PickRoutine(int playerID, PickerType pickerType) {
             Player player = PlayerManager.instance.players.FirstOrDefault(p => p.playerID == playerID);
+            yield return GameModeManager.TriggerHook(SimultaneousPicksHooks.OnSimultaneousPickStart);
             if(player.data.view.IsMine) {
-                yield return GameModeManager.TriggerHook(SimultaneousPicksHooks.OnSimultaneousPickStart);
 
                 int PlayerSimultaneousPicks = 1;
                 if(player != null && playerSimultaneousPicksQueue.ContainsKey(player)) {
@@ -189,9 +263,8 @@ namespace SimultaneousCardPicksGM {
                 }
 
                 while(PlayerSimultaneousPicks > 0) {
-                    if(player.data.view.IsMine) {
-                        CardChoiceVisuals.instance.Show(player.playerID, true);
-                    }
+                    CardChoiceVisuals.instance.Show(player.playerID, true);
+                    NetworkingManager.RPC(typeof(SimultaneousPicksHandler), nameof(RPCS_ToggleCardChoiceVisualsIfIBeingSpectated), player.playerID, true);
 
                     yield return GameModeManager.TriggerHook(GameModeHooks.HookPlayerPickStart);
                     yield return CardChoice.instance.DoPick(1, playerID, pickerType);
@@ -206,15 +279,59 @@ namespace SimultaneousCardPicksGM {
 
                 OutOfPickPhaseDisplay.Instance.SetActive(1, true);
                 NetworkingManager.RPC(typeof(SimultaneousPicksHandler), nameof(RPCS_SetPlayerState), player.playerID, SimultaneousPickPlayerState.FinishedPick);
-                yield return GameModeManager.TriggerHook(SimultaneousPicksHooks.OnSimultaneousPickEnd);
+
+            }
+            yield return WaitForPlayerSync(playerID);
+            yield return GameModeManager.TriggerHook(SimultaneousPicksHooks.OnSimultaneousPickEnd);
+        }
+
+        #region 
+        [UnboundRPC]
+        internal static void RPCS_ToggleCardChoiceVisualsIfIBeingSpectated(int playerID, bool isActive) {
+            Player player = PlayerManager.instance.players.FirstOrDefault(p => p.playerID == playerID);
+            if(player == null) return;
+
+            if(SimultaneousPickPhaseSpectatingHandler.Instance.SpectatedPlayer == player) {
+                if(isActive) {
+                    CardChoiceVisuals.instance.Show(playerID, true);
+                } else {
+                    CardChoiceVisuals.instance.Hide();
+                }
             }
         }
 
-
+        [UnboundRPC]
+        internal static void RPCS_SetCurrentPickingPlayer(int playerID) {
+            Player player = PlayerManager.instance.players.FirstOrDefault(p => p.playerID == playerID);
+            if(player == null) return;
+            if(!Instance.currentPickingPlayers.Contains(player)) {
+                Instance.currentPickingPlayers.Add(player);
+            }
+        }
 
         [UnboundRPC]
-        private static void RPCS_WaitForPlayerSync() {
+        internal static void RPCS_RemoveCurrentPickingPlayer(int playerID) {
+            Player player = PlayerManager.instance.players.FirstOrDefault(p => p.playerID == playerID);
+            if(player == null) return;
+            if(Instance.currentPickingPlayers.Contains(player)) {
+                Instance.currentPickingPlayers.Remove(player);
+            }
+        }
+
+        [UnboundRPC]
+        private static void RPCS_WaitForAllPlayersToSync() {
             Instance.waitForSyncCounter++;
+        }
+
+        [UnboundRPC]
+        private static void RPCS_WaitForPlayerToSync(int playerID) {
+            Player player = PlayerManager.instance.players.FirstOrDefault(p => p.playerID == playerID);
+            if(player == null) return;
+
+            if(!Instance.playerSyncCounters.ContainsKey(playerID)) {
+                Instance.playerSyncCounters[playerID] = 0;
+            }
+            Instance.playerSyncCounters[playerID]++;
         }
 
         [UnboundRPC]
@@ -255,5 +372,6 @@ namespace SimultaneousCardPicksGM {
                 hasAlreadyExitedPickPhase = false;
             }
         }
+        #endregion
     }
 }

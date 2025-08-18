@@ -1,6 +1,7 @@
 using BepInEx;
 using HarmonyLib;
 using SimultaneousCardPicksGM.GameModes;
+using SimultaneousCardPicksGM.Handlers;
 using SimultaneousCardPicksGM.Monobehaviours;
 using SimultaneousCardPicksGM.Patches;
 using System.Collections.Generic;
@@ -22,17 +23,18 @@ namespace SimultaneousCardPicksGM {
         private const string modName = "Simultaneous Card Picks GM";
         internal const string modInitials = "SCP";
         
-        internal static SimultaneousCardPicksGM instance;
+        internal static SimultaneousCardPicksGM Instance;
         internal static AssetBundle assets;
         internal static Harmony harmony;
 
         void Awake() {
-            instance = this;
+            Instance = this;
             harmony = new Harmony(modId);
             harmony.PatchAll(Assembly.GetExecutingAssembly());
 
             assets = Jotunn.Utils.AssetUtils.LoadAssetBundleFromResources("simultaneouscardpicksgm_assets", typeof(SimultaneousCardPicksGM).Assembly);
             gameObject.AddComponent<SimultaneousPicksHandler>();
+            gameObject.AddComponent<SimultaneousPickPhaseSpectatingHandler>();
 
             GameObject outOfPickPhaseDisplay = Instantiate(assets.LoadAsset<GameObject>("OutOfPickPhaseDisplay"));
             outOfPickPhaseDisplay.GetComponent<OutOfPickPhaseDisplay>().SetActive(false);

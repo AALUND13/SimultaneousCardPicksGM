@@ -1,4 +1,5 @@
 ﻿using HarmonyLib;
+using SimultaneousCardPicksGM.Handlers;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -21,7 +22,7 @@ namespace SimultaneousCardPicksGM.Patches {
         }
 
         private static IEnumerator OnSimultaneousPickStart(IGameModeHandler gm) {
-            SimultaneousCardPicksGM.instance.ExecuteAfterSeconds(0.5f, () => {
+            SimultaneousCardPicksGM.Instance.ExecuteAfterSeconds(0.5f, () => {
                 List<int> playerIDsToPick = (List<int>)AccessTools.Field(typeof(PickNCards.PickNCards), "playerIDsToPick")
                     .GetValue(null);
                 int picks = (int)AccessTools.Field(typeof(PickNCards.PickNCards), "picks")

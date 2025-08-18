@@ -1,5 +1,6 @@
 ﻿using HarmonyLib;
 using Photon.Pun;
+using SimultaneousCardPicksGM.Handlers;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -10,21 +11,44 @@ using UnityEngine;
 namespace SimultaneousCardPicksGM.Patches {
     [HarmonyPatch(typeof(CardChoiceVisuals))]
     internal class CardChoiceVisualPatch {
+        private static int CardChoiceVisualPlayerID = -1;
+
         [HarmonyPatch("SetCurrentSelected")]
         [HarmonyPrefix]
         public static bool SetCurrentSelectedPrefix(CardChoiceVisuals __instance, int toSet) {
             if(SimultaneousPicksHandler.IsSimultaneousPickPhaseActive()) {
+                Player player = PlayerManager.instance.players.FirstOrDefault(p => p.playerID == CardChoiceVisualPlayerID);
+                PhotonView photonView = __instance.GetComponent<PhotonView>();
+
                 __instance.InvokeMethod("RPCA_SetCurrentSelected", toSet);
+
+                Player[] spectatingPlayers = SimultaneousPickPhaseSpectatingHandler.Instance.PlayerSpectatingMap
+                    .Where(kvp => kvp.Value == player)
+                    .Select(kvp => kvp.Key)
+                    .ToArray();
+                
+                foreach(Player spectatingPlayer in spectatingPlayers) {
+                    photonView.RPC("RPCA_SetCurrentSelected", spectatingPlayer.data.view.Owner, toSet);
+                }
+
                 return false;
             }
             return true;
         }
 
+        [HarmonyPatch("Hide")]
+        [HarmonyPrefix]
+        public static void ShowPrefix() {
+            CardChoiceVisualPlayerID = -1;
+        }
+
+
         [HarmonyPatch("Show")]
         [HarmonyPrefix]
         public static bool ShowPrefix(CardChoiceVisuals __instance, int pickerID) {
+            CardChoiceVisualPlayerID = pickerID;
             Player player = PlayerManager.instance.players.FirstOrDefault(p => p.playerID == pickerID);
-            if(SimultaneousPicksHandler.IsSimultaneousPickPhaseActive() && !player.data.view.IsMine) {
+            if(SimultaneousPicksHandler.IsSimultaneousPickPhaseActive() && !player.data.view.IsMine && SimultaneousPickPhaseSpectatingHandler.Instance.SpectatedPlayer != player) {
                 return false;
             }
             return true;
