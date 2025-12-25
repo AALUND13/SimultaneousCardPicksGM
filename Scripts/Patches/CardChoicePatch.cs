@@ -46,7 +46,6 @@ namespace SimultaneousCardPicksGM.Patches {
         [HarmonyPatch(nameof(CardChoice.StartPick))]
         [HarmonyPostfix]
         public static void StartPickPostfix(CardChoice __instance, int pickerIDToSet) {
-            UnityEngine.Debug.Log("SimultaneousCardPicksGM: Patching StartPick to set pickrID in Simultaneous Card Picks Game Mode.");
             if(SimultaneousPicksHandler.IsSimultaneousPickPhaseActive()) {
                 Player player = PlayerManager.instance.players.Find(p => p.playerID == pickerIDToSet);
                 if(player != null && !player.data.view.IsMine) {
@@ -79,6 +78,10 @@ namespace SimultaneousCardPicksGM.Patches {
                         new CodeInstruction(OpCodes.Ldarg_1), // Load cardIDs argument
                         new CodeInstruction(OpCodes.Ldarg_S, 4), // Load playerID argument
                         new CodeInstruction(OpCodes.Callvirt, removeCardToPlayerSpawnedCardsMethod),
+
+                        // Debug log
+                        new CodeInstruction(OpCodes.Ldstr, "SimultaneousCardPicksGM: Removing cards from player spawned cards in RPCA_DoEndPick."),
+                        new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(UnityEngine.Debug), nameof(UnityEngine.Debug.Log), new Type[] { typeof(string) })),
 
                         // Check if player is not in Simultaneous Card Picks or is the local player
                         new CodeInstruction(OpCodes.Ldarg_S, 4), // Load playerID argument
@@ -138,7 +141,7 @@ namespace SimultaneousCardPicksGM.Patches {
                             // Hide cards from other players
                             new CodeInstruction(OpCodes.Ldloc_1), // Load the this (CardChoice instance)
                             new CodeInstruction(OpCodes.Ldfld, spawnedCardsField), // Load spawnedCards
-                            new CodeInstruction(OpCodes.Ldarg_0), // Load this ('<IDoEndPick>d__17' instance)
+                            new CodeInstruction(OpCodes.Ldarg_0), // Load this ('<ReplaceCards>d__17' instance)
                             new CodeInstruction(OpCodes.Ldfld, indexField), // Load the index
                             new CodeInstruction(OpCodes.Callvirt, getItemFieldMethod), // Call get_Item on the list
                             new CodeInstruction(OpCodes.Ldloc_1), // Load the this (CardChoice instance)
@@ -148,7 +151,7 @@ namespace SimultaneousCardPicksGM.Patches {
                             // Add card to player spawned cards
                             new CodeInstruction(OpCodes.Ldloc_1), // Load the this (CardChoice instance)
                             new CodeInstruction(OpCodes.Ldfld, spawnedCardsField), // Load spawnedCards
-                            new CodeInstruction(OpCodes.Ldarg_0), // Load this ('<IDoEndPick>d__17' instance)
+                            new CodeInstruction(OpCodes.Ldarg_0), // Load this ('<ReplaceCards>d__17' instance)
                             new CodeInstruction(OpCodes.Ldfld, indexField), // Load the index
                             new CodeInstruction(OpCodes.Callvirt, getItemFieldMethod), // Call get_Item on the list
                             new CodeInstruction(OpCodes.Ldloc_1), // Load the this (CardChoice instance)
@@ -255,6 +258,10 @@ namespace SimultaneousCardPicksGM.Patches {
             if(SimultaneousPickPhaseSpectatingHandler.Instance.IsSpectating && PlayerToClientMates[player].Contains(SimultaneousPickPhaseSpectatingHandler.Instance.SpectatedPlayer)) {
                 SimultaneousPickPhaseSpectatingHandler.Instance.SetSpectatedPlayer(player);
             }
+
+            if(player.data.view.IsMine) {
+                ToggleCardChoiceVisualsIfIBeingSpectated(picketIDToSet, true);
+            }
         }
 
 
@@ -348,6 +355,10 @@ namespace SimultaneousCardPicksGM.Patches {
                     SimultaneousPicksHandler.Instance.playerSpwnedCards[picker] = new List<GameObject>();
                 }
                 SimultaneousPicksHandler.Instance.playerSpwnedCards[picker].Add(card);
+            }
+
+            if(SimultaneousPickPhaseSpectatingHandler.Instance.SpectatedPlayer == picker) {
+                CardChoice.instance.SetFieldValue("spawnedCards", SimultaneousPicksHandler.Instance.playerSpwnedCards[picker].ToList());
             }
         }
 

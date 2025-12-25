@@ -29,12 +29,14 @@ namespace SimultaneousCardPicksGM {
 
         void Awake() {
             Instance = this;
+            
+            gameObject.AddComponent<SimultaneousPicksHandler>();
+            gameObject.AddComponent<SimultaneousPickPhaseSpectatingHandler>();
+
             harmony = new Harmony(modId);
             harmony.PatchAll(Assembly.GetExecutingAssembly());
 
             assets = Jotunn.Utils.AssetUtils.LoadAssetBundleFromResources("simultaneouscardpicksgm_assets", typeof(SimultaneousCardPicksGM).Assembly);
-            gameObject.AddComponent<SimultaneousPicksHandler>();
-            gameObject.AddComponent<SimultaneousPickPhaseSpectatingHandler>();
 
             GameObject outOfPickPhaseDisplay = Instantiate(assets.LoadAsset<GameObject>("OutOfPickPhaseDisplay"));
             outOfPickPhaseDisplay.GetComponent<OutOfPickPhaseDisplay>().SetActive(false);

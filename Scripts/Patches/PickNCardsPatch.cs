@@ -1,5 +1,7 @@
 ﻿using HarmonyLib;
+using Photon.Realtime;
 using SimultaneousCardPicksGM.Handlers;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,6 +11,14 @@ using UnboundLib.GameModes;
 
 namespace SimultaneousCardPicksGM.Patches {
     internal class PickNCardsPatch { 
+        private static MethodInfo GetCardChoicePatchPrefixMethod() {
+            var cardChoicePatchStartPickType = typeof(DrawNCards.DrawNCards).Assembly
+                .GetTypes()
+                .FirstOrDefault(t => t.Name.Contains("CardChoicePatchStartPick"));
+            var prefixMethod = AccessTools.Method(cardChoicePatchStartPickType, "Prefix");
+            return prefixMethod;
+        }
+
         public static void Patch(Harmony harmony) {
             var nestedType = typeof(PickNCards.PickNCards)
                 .GetNestedTypes(BindingFlags.NonPublic | BindingFlags.Instance)
@@ -16,8 +26,19 @@ namespace SimultaneousCardPicksGM.Patches {
 
             var original = AccessTools.Method(nestedType, "MoveNext");
             var prefix = AccessTools.Method(typeof(PickNCardsPatch), nameof(PickNCardsPrefix));
-
+            
             GameModeManager.AddHook(SimultaneousPicksHooks.OnSimultaneousPickStart, OnSimultaneousPickStart);
+
+
+            // This most likely a hacky way to set the draws of cards, but it works...
+            var prefixMethod = GetCardChoicePatchPrefixMethod();
+            SimultaneousPickPhaseSpectatingHandler.Instance.OnSpectatedPlayerChanged += (Player player) => {
+                if(player != null && SimultaneousPicksHandler.IsSimultaneousPickPhaseActive()) {
+                    prefixMethod.Invoke(null, new object[] { CardChoice.instance, player.playerID });
+                }
+            };
+
+
             harmony.Patch(original, prefix: new HarmonyMethod(prefix));
         }
 

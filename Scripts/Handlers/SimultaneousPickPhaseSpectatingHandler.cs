@@ -22,6 +22,8 @@ namespace SimultaneousCardPicksGM.Handlers {
             .OrderBy(p => p.playerID)
             .ToArray();
 
+        public event Action<Player> OnSpectatedPlayerChanged;
+
         public Player SpectatedPlayer => spectatedPlayer;
         public bool IsSpectating => spectatedPlayer != null;
 
@@ -40,10 +42,15 @@ namespace SimultaneousCardPicksGM.Handlers {
             if(player != null && SimultaneousPicksHandler.Instance.GetPlayerState(player) != SimultaneousPickPlayerState.PickingDone) {
                 spectatedPlayer = player;
 
+                List<GameObject> spawnedCards = SimultaneousPicksHandler.Instance.PlayerSpawnedCards[player].ToList();
+
+                CardChoice.instance.pickrID = player.playerID;
                 CardChoiceVisuals.instance.Show(player.playerID, true);
-                SimultaneousPicksHandler.Instance.ShowCards(SimultaneousPicksHandler.Instance.PlayerSpawnedCards[player].ToArray());
+                SimultaneousPicksHandler.Instance.ShowCards(spawnedCards.ToArray());
+                CardChoice.instance.SetFieldValue("spawnedCards", spawnedCards);
                 NetworkingManager.RPC(typeof(SimultaneousPickPhaseSpectatingHandler), nameof(RPC_SetSpectatedPlayer), firstLocalPlayer.playerID, player.playerID);
                 OutOfPickPhaseDisplay.Instance.SetActive(false);
+                OnSpectatedPlayerChanged?.Invoke(spectatedPlayer);
             }
         }
 
@@ -51,13 +58,16 @@ namespace SimultaneousCardPicksGM.Handlers {
             Player firstLocalPlayer = PlayerManager.instance.players.FirstOrDefault(p => p.data.view.IsMine);
 
             if(spectatedPlayer != null) {
+                CardChoice.instance.pickrID = -1;
                 CardChoiceVisuals.instance.Hide();
                 SimultaneousPicksHandler.Instance.HideCards(SimultaneousPicksHandler.Instance.PlayerSpawnedCards[spectatedPlayer].ToArray());
+                CardChoice.instance.SetFieldValue("spawnedCards", new List<GameObject>());
                 NetworkingManager.RPC(typeof(SimultaneousPickPhaseSpectatingHandler), nameof(RPC_SetSpectatedPlayer), firstLocalPlayer.playerID, -1);
                 if(showOutOfPickPhaseDisplay) OutOfPickPhaseDisplay.Instance.SetActive(true);
 
                 spectatedPlayer = null;
                 lastStickDirection = StickDirection.None;
+                OnSpectatedPlayerChanged?.Invoke(null);
             }
         }
 
